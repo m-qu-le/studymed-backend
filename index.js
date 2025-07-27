@@ -3,18 +3,26 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors = require('cors'); // Import thư viện CORS
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5001; // Cổng dự phòng khi chạy cục bộ
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Import các router
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/api/quiz');
-const userRoutes = require('./routes/user'); // MỚI: Import router user
+const userRoutes = require('./routes/user');
 
-app.use(cors()); // Middleware CORS phải ở trên cùng
-app.use(express.json()); // Middleware để Express có thể đọc dữ liệu JSON
+// MỚI: Định nghĩa các OPTIONS cho CORS để chỉ cho phép frontend của bạn truy cập
+const corsOptions = {
+  origin: 'https://studymed-frontend.vercel.app', // ĐÃ ĐẶT URL CHÍNH XÁC CỦA FRONTEND CỦA BẠN
+  credentials: true, // Cho phép gửi cookies và header xác thực
+  optionsSuccessStatus: 200 // Mã trạng thái thành công cho các yêu cầu preflight
+};
+
+app.use(cors(corsOptions)); // MỚI: Sử dụng CORS với các tùy chọn đã định nghĩa
+
+app.use(express.json()); // Middleware để Express có thể đọc dữ liệu JSON từ request body
 
 // Định nghĩa một API endpoint đơn giản (route)
 app.get('/', (req, res) => {
@@ -24,7 +32,7 @@ app.get('/', (req, res) => {
 // Sử dụng các router
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
-app.use('/api/users', userRoutes); // MỚI: Gắn router user vào đường dẫn '/api/users'
+app.use('/api/users', userRoutes);
 
 // Hàm kết nối tới MongoDB
 const connectDB = async () => {
