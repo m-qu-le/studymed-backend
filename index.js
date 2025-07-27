@@ -3,9 +3,9 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Import thư viện CORS
+const cors = require('cors');
 const app = express();
-const PORT = process.env.PORT || 5001; // Cổng dự phòng khi chạy cục bộ
+const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Import các router
@@ -13,16 +13,18 @@ const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/api/quiz');
 const userRoutes = require('./routes/user');
 
-// MỚI: Định nghĩa các OPTIONS cho CORS để chỉ cho phép frontend của bạn truy cập
+// MỚI: Định nghĩa các OPTIONS cho CORS một cách tường minh và đầy đủ hơn
 const corsOptions = {
-  origin: 'https://studymed-frontend.vercel.app', // ĐÃ ĐẶT URL CHÍNH XÁC CỦA FRONTEND CỦA BẠN
+  origin: 'https://studymed-frontend.vercel.app', // URL frontend chính xác của bạn
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Các phương thức HTTP được phép
   credentials: true, // Cho phép gửi cookies và header xác thực
-  optionsSuccessStatus: 200 // Mã trạng thái thành công cho các yêu cầu preflight
+  allowedHeaders: 'Content-Type,Authorization', // Các header được phép
+  optionsSuccessStatus: 204 // Mã trạng thái thành công cho các yêu cầu OPTIONS preflight (không có nội dung)
 };
 
 app.use(cors(corsOptions)); // MỚI: Sử dụng CORS với các tùy chọn đã định nghĩa
 
-app.use(express.json()); // Middleware để Express có thể đọc dữ liệu JSON từ request body
+app.use(express.json());
 
 // Định nghĩa một API endpoint đơn giản (route)
 app.get('/', (req, res) => {
