@@ -13,7 +13,7 @@ router.get('/filters', auth, async (req, res) => {
     const tags = await Quiz.distinct('questions.tags');
 
     // Lấy các mức độ khó từ Schema
-    const difficulties = Quiz.schema.path('questions.difficulty').caster.enumValues;
+    const difficulties = ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
 
     res.json({
       tags: tags.sort(), // Sắp xếp lại tag theo alphabet
