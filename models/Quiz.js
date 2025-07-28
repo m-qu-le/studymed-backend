@@ -1,4 +1,4 @@
-// Quiz.js
+// server/models/Quiz.js
 const mongoose = require('mongoose');
 
 // Schema cho từng lựa chọn đáp án trong một câu hỏi
@@ -8,11 +8,11 @@ const optionSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  isCorrect: { // True nếu đây là đáp án đúng (cho single-choice) hoặc một trong các đáp án đúng (cho multi-select)
+  isCorrect: {
     type: Boolean,
     default: false
   },
-  feedback: { // Giải thích cụ thể cho lựa chọn này
+  feedback: {
     type: String,
     trim: true
   }
@@ -25,28 +25,36 @@ const questionSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  questionType: { // Loại câu hỏi: single-choice, multi-select, true-false
+  questionType: {
     type: String,
     enum: ['single-choice', 'multi-select', 'true-false'],
     default: 'single-choice',
     required: true
   },
-  options: { // Mảng các lựa chọn, sử dụng optionSchema
+  options: {
     type: [optionSchema],
     required: true,
     validate: {
       validator: function(v) {
-        // Đảm bảo có ít nhất 2 lựa chọn cho single-choice/multi-select
-        // True/false cũng có 2 lựa chọn cố định là "Đúng"/"Sai"
         return v && v.length >= 2;
       },
       message: 'Một câu hỏi phải có ít nhất 2 lựa chọn.'
     }
   },
-  generalExplanation: { // Giải thích tổng thể cho câu hỏi (nếu có)
+  generalExplanation: {
     type: String,
     trim: true
-  }
+  },
+  // MỚI: Thêm trường tags và độ khó
+  tags: {
+    type: [String], // Kiểu dữ liệu là một mảng các chuỗi
+    default: [] // Mặc định là một mảng rỗng nếu không được cung cấp
+  },
+difficulty: {
+  type: String,
+  enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'], 
+  default: 'Thông hiểu'
+}
 });
 
 // Định nghĩa Schema cho một Bộ đề (QuizSchema)
@@ -61,22 +69,22 @@ const quizSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  subject: { // Môn học (ví dụ: "Giải phẫu", "Dược lý")
+  subject: {
     type: String,
     required: true,
     trim: true
   },
-  topic: { // Chủ đề con (ví dụ: "Hệ tim mạch", "Thuốc kháng sinh")
+  topic: {
     type: String,
     trim: true
   },
-  questions: [questionSchema], // Mảng các câu hỏi, sử dụng questionSchema mới
+  questions: [questionSchema],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  isSystemQuiz: { // Mới: Đánh dấu đây có phải là bộ đề hệ thống (do admin tạo) không
+  isSystemQuiz: {
     type: Boolean,
     default: false
   }
