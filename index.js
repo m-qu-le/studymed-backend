@@ -12,6 +12,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/api/quiz');
 const userRoutes = require('./routes/user');
+const studyRoutes = require('./routes/api/study');
 
 // MỚI: Định nghĩa các OPTIONS cho CORS một cách tường minh và đầy đủ hơn
 const corsOptions = {
@@ -25,6 +26,7 @@ const corsOptions = {
 app.use(cors(corsOptions)); // MỚI: Sử dụng CORS với các tùy chọn đã định nghĩa
 
 app.use(express.json());
+app.use('/api/study', studyRoutes);
 
 // Định nghĩa một API endpoint đơn giản (route)
 app.get('/', (req, res) => {
