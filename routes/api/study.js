@@ -7,6 +7,24 @@ const Quiz = require('../../models/Quiz');
 // @route   GET api/study/filters
 // @desc    Lấy tất cả các tag và độ khó duy nhất để làm bộ lọc
 // @access  Private
+router.get('/filters', auth, async (req, res) => {
+  try {
+    // Lấy tất cả các tag duy nhất từ tất cả các câu hỏi
+    const tags = await Quiz.distinct('questions.tags');
+
+    // Lấy các mức độ khó
+    const difficulties = ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
+
+    res.json({
+      tags: tags.sort(), // Sắp xếp lại tag theo alphabet
+      difficulties
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Lỗi Server');
+  }
+});
+
 // @route   POST api/study/session
 // @desc    Tạo một buổi ôn tập (bộ đề ảo) dựa trên các bộ lọc
 // @access  Private
