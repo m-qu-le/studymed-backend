@@ -1,9 +1,9 @@
 // server/index.js
 require('dotenv').config();
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -14,31 +14,30 @@ const quizRoutes = require('./routes/api/quiz');
 const userRoutes = require('./routes/user');
 const studyRoutes = require('./routes/api/study');
 
-// MỚI: Định nghĩa các OPTIONS cho CORS một cách tường minh và đầy đủ hơn
+// Cấu hình CORS
 const corsOptions = {
-  origin: 'https://studymed-frontend.vercel.app', // URL frontend chính xác của bạn
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Các phương thức HTTP được phép
-  credentials: true, // Cho phép gửi cookies và header xác thực
-  allowedHeaders: 'Content-Type,Authorization', // Các header được phép
-  optionsSuccessStatus: 204 // Mã trạng thái thành công cho các yêu cầu OPTIONS preflight (không có nội dung)
+  origin: 'https://studymed-frontend.vercel.app',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  allowedHeaders: 'Content-Type,Authorization',
+  optionsSuccessStatus: 204
 };
+app.use(cors(corsOptions));
 
-app.use(cors(corsOptions)); // MỚI: Sử dụng CORS với các tùy chọn đã định nghĩa
-
+// Middlewares
 app.use(express.json());
-app.use('/api/study', studyRoutes);
 
-// Định nghĩa một API endpoint đơn giản (route)
+// API Routes
 app.get('/', (req, res) => {
   res.send('Chào mừng bạn đến với backend StudyMed!');
 });
 
-// Sử dụng các router
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/study', studyRoutes); // Đảm bảo dòng này được đăng ký
 
-// Hàm kết nối tới MongoDB
+// Kết nối Database
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGODB_URI);
@@ -49,10 +48,8 @@ const connectDB = async () => {
   }
 };
 
-// Gọi hàm kết nối database trước khi khởi động server
-connectDB();
-
-app.listen(PORT, () => {
-  console.log(`Server đang chạy trên cổng ${PORT}`);
-  console.log(`Truy cập: http://localhost:${PORT}`);
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server đang chạy trên cổng ${PORT}`);
+    });
 });
