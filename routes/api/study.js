@@ -7,63 +7,102 @@ const Quiz = require('../../models/Quiz');
 // @route   GET api/study/filters
 // @desc    Lấy tất cả các tag và độ khó duy nhất để làm bộ lọc
 // @access  Private
+// GIỮ NGUYÊN: Route này đã được tối ưu bằng aggregation, hoạt động rất hiệu quả.
 router.get('/filters', auth, async (req, res) => {
   try {
-    // Lấy tất cả các tag duy nhất từ tất cả các câu hỏi
-    const tags = await Quiz.distinct('questions.tags');
+    // Sử dụng aggregation để lấy tag từ cả câu hỏi đơn và câu hỏi con
+    const tagsResult = await Quiz.aggregate([
+      { $project: { questions: 1 } },
+      { $unwind: '$questions' },
+      {
+        $project: {
+          itemTags: {
+            $cond: {
+              if: { $eq: ['$questions.type', 'single'] },
+              then: '$questions.tags',
+              else: '$questions.childQuestions.tags'
+            }
+          }
+        }
+      },
+      { $unwind: '$itemTags' },
+      { $unwind: '$itemTags' },
+      { $group: { _id: null, uniqueTags: { $addToSet: '$itemTags' } } }
+    ]);
 
-    // Lấy các mức độ khó
+    const tags = tagsResult.length > 0 ? tagsResult[0].uniqueTags.sort() : [];
     const difficulties = ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
 
-    res.json({
-      tags: tags.sort(), // Sắp xếp lại tag theo alphabet
-      difficulties
-    });
+    res.json({ tags, difficulties });
   } catch (err) {
-    console.error(err.message);
+    console.error('Error fetching filters:', err.message);
     res.status(500).send('Lỗi Server');
   }
 });
 
+
 // @route   POST api/study/session
 // @desc    Tạo một buổi ôn tập (bộ đề ảo) dựa trên các bộ lọc
 // @access  Private
+// ĐÃ SỬA: Thay thế hoàn toàn logic cũ bằng Aggregation Pipeline để tối ưu hiệu năng.
 router.post('/session', auth, async (req, res) => {
-  // MỚI: Thêm `tagFilterMode` vào, mặc định là 'any' (bất kỳ)
   const { tags, difficulties, numberOfQuestions, tagFilterMode = 'any' } = req.body;
 
   try {
-    const matchConditions = {};
+    const pipeline = [];
 
-    if (tags && tags.length > 0) {
-      // MỚI: Logic để chọn toán tử $in (bất kỳ) hoặc $all (tất cả)
-      if (tagFilterMode === 'all') {
-        matchConditions['questions.tags'] = { $all: tags }; // Lọc câu hỏi phải chứa TẤT CẢ các tag
-      } else {
-        matchConditions['questions.tags'] = { $in: tags }; // Lọc câu hỏi chỉ cần chứa BẤT KỲ tag nào
+    // Giai đoạn 1: Tách mảng questions ra
+    pipeline.push({ $unwind: '$questions' });
+
+    // Giai đoạn 2: Hợp nhất câu hỏi đơn và câu hỏi con vào một trường duy nhất
+    pipeline.push({
+      $project: {
+        unifiedQuestion: {
+          $cond: {
+            if: { $eq: ['$questions.type', 'group'] },
+            then: '$questions.childQuestions', // Nếu là group, lấy mảng câu hỏi con
+            else: ['$questions'] // Nếu là single, tạo mảng chứa chính nó
+          }
+        }
       }
-    }
+    });
+    
+    // Giai đoạn 3: Tách mảng hợp nhất để có danh sách phẳng cuối cùng
+    pipeline.push({ $unwind: '$unifiedQuestion' });
 
+    // Giai đoạn 4: Xây dựng và áp dụng điều kiện lọc
+    const matchConditions = {};
     if (difficulties && difficulties.length > 0) {
-      matchConditions['questions.difficulty'] = { $in: difficulties };
+      matchConditions['unifiedQuestion.difficulty'] = { $in: difficulties };
+    }
+    if (tags && tags.length > 0) {
+      const tagOperator = tagFilterMode === 'all' ? '$all' : '$in';
+      matchConditions['unifiedQuestion.tags'] = { [tagOperator]: tags };
     }
 
-    const questions = await Quiz.aggregate([
-      { $unwind: '$questions' },
-      { $match: matchConditions },
-      { $sample: { size: Number(numberOfQuestions) } },
-      { $project: { _id: 0, question: '$questions' } }
-    ]);
+    if (Object.keys(matchConditions).length > 0) {
+      pipeline.push({ $match: matchConditions });
+    }
 
-    const virtualQuiz = {
-      title: 'Buổi ôn tập tùy chỉnh',
-      description: `Gồm ${questions.length} câu hỏi được chọn lọc.`,
-      questions: questions.map(q => q.question) 
-    };
+    // Giai đoạn 5: Lấy số lượng câu hỏi ngẫu nhiên
+    pipeline.push({ $sample: { size: Number(numberOfQuestions) } });
 
-    if (questions.length === 0) {
+    // Giai đoạn 6: Làm sạch cấu trúc kết quả trả về
+    pipeline.push({ $replaceRoot: { newRoot: '$unifiedQuestion' } });
+
+    // Thực thi pipeline
+    const selectedQuestions = await Quiz.aggregate(pipeline);
+
+    if (selectedQuestions.length === 0) {
       return res.status(404).json({ msg: 'Không tìm thấy câu hỏi nào phù hợp với lựa chọn của bạn.' });
     }
+
+    // Tạo bộ đề ảo để gửi về frontend
+    const virtualQuiz = {
+      title: 'Buổi ôn tập tùy chỉnh',
+      description: `Gồm ${selectedQuestions.length} câu hỏi được chọn lọc.`,
+      questions: selectedQuestions
+    };
 
     res.json(virtualQuiz);
 
@@ -72,4 +111,5 @@ router.post('/session', auth, async (req, res) => {
     res.status(500).send('Lỗi Server');
   }
 });
+
 module.exports = router;
