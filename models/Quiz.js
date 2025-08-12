@@ -1,30 +1,15 @@
 // server/models/Quiz.js
 const mongoose = require('mongoose');
 
-// Schema cho từng lựa chọn đáp án trong một câu hỏi
 const optionSchema = new mongoose.Schema({
-  text: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  isCorrect: {
-    type: Boolean,
-    default: false
-  },
-  feedback: {
-    type: String,
-    trim: true
-  }
+  text: { type: String, required: true, trim: true },
+  isCorrect: { type: Boolean, default: false },
+  feedback: { type: String, trim: true }
 });
 
-// Định nghĩa Schema cho một Câu hỏi (QuestionSchema)
-const questionSchema = new mongoose.Schema({
-  questionText: {
-    type: String,
-    required: true,
-    trim: true
-  },
+// MỚI: Schema cho các câu hỏi con trong một nhóm
+const childQuestionSchema = new mongoose.Schema({
+  questionText: { type: String, required: true, trim: true },
   questionType: {
     type: String,
     enum: ['single-choice', 'multi-select', 'true-false'],
@@ -35,65 +20,57 @@ const questionSchema = new mongoose.Schema({
     type: [optionSchema],
     required: true,
     validate: {
-      validator: function(v) {
-        return v && v.length >= 2;
-      },
+      validator: (v) => v && v.length >= 2,
       message: 'Một câu hỏi phải có ít nhất 2 lựa chọn.'
     }
   },
-  generalExplanation: {
+  generalExplanation: { type: String, trim: true },
+  tags: { type: [String], default: [] },
+  difficulty: {
     type: String,
-    trim: true
-  },
-  // MỚI: Thêm trường tags và độ khó
-  tags: {
-    type: [String], // Kiểu dữ liệu là một mảng các chuỗi
-    default: [] // Mặc định là một mảng rỗng nếu không được cung cấp
-  },
-difficulty: {
-  type: String,
-  enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'], 
-  default: 'Thông hiểu'
-}
+    enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'],
+    default: 'Thông hiểu'
+  }
 });
 
-// Định nghĩa Schema cho một Bộ đề (QuizSchema)
-const quizSchema = new mongoose.Schema({
-  title: {
+// ĐÃ SỬA: questionSchema giờ là một cấu trúc "lai"
+const questionSchema = new mongoose.Schema({
+  type: {
     type: String,
     required: true,
-    unique: true,
-    trim: true
+    enum: ['single', 'group']
   },
-  description: {
+  
+  // Các trường cho type: 'single'
+  questionText: { type: String, required: function() { return this.type === 'single'; } },
+  options: { type: [optionSchema], required: function() { return this.type === 'single'; } },
+  
+  // Các trường cho type: 'group'
+  caseStem: { type: String, required: function() { return this.type === 'group'; } },
+  childQuestions: { type: [childQuestionSchema], required: function() { return this.type === 'group'; } },
+  
+  // Các trường chung cho cả hai loại
+  generalExplanation: { type: String, trim: true },
+  tags: { type: [String], default: [] },
+  difficulty: {
     type: String,
-    trim: true
-  },
-  subject: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  topic: {
-    type: String,
-    trim: true
-  },
-  questions: [questionSchema],
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  isSystemQuiz: {
-    type: Boolean,
-    default: false
+    enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'],
+    default: 'Thông hiểu'
   }
+});
+
+const quizSchema = new mongoose.Schema({
+  title: { type: String, required: true, unique: true, trim: true },
+  description: { type: String, trim: true },
+  subject: { type: String, required: true, trim: true },
+  topic: { type: String, trim: true },
+  questions: [questionSchema], // Mảng này giờ sẽ chứa các câu hỏi "lai"
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  isSystemQuiz: { type: Boolean, default: false }
 }, {
   timestamps: true
 });
 
-// Tạo Model từ Schema
 const Quiz = mongoose.model('Quiz', quizSchema);
 
-// Xuất Model
 module.exports = Quiz;
