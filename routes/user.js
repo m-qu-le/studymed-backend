@@ -1,30 +1,22 @@
 // server/routes/user.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware'); // Middleware xác thực
-const User = require('../models/User'); // User Model
-const Quiz = require('../models/Quiz'); // Quiz Model để kiểm tra câu hỏi tồn tại
+const auth = require('../middleware/authMiddleware');
+const User = require('../models/User');
+const Quiz = require('../models/Quiz');
 
 // @route   PUT api/users/bookmark/:question_id
 // @desc    Thêm/Xóa một câu hỏi khỏi danh sách bookmark của người dùng
 // @access  Private
 router.put('/bookmark/:question_id', auth, async (req, res) => {
-    const userId = req.user.id; // ID người dùng từ token
-    const questionId = req.params.question_id; // ID câu hỏi từ URL
-
     try {
-        let user = await User.findById(userId);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ msg: 'Người dùng không tìm thấy' });
         }
 
-        // Tùy chọn: Kiểm tra xem questionId có tồn tại trong bất kỳ quiz nào không
-        // (Thực tế, câu hỏi là sub-document, nên cần tìm Quiz chứa nó)
-        const questionExistsInQuiz = await Quiz.exists({ 'questions._id': questionId });
-        if (!questionExistsInQuiz) {
-            return res.status(404).json({ msg: 'Câu hỏi không tồn tại.' });
-        }
-
+        const questionId = req.params.question_id;
+        
         // Kiểm tra xem câu hỏi đã được bookmark chưa
         const isBookmarked = user.bookmarkedQuestions.includes(questionId);
 
@@ -44,9 +36,6 @@ router.put('/bookmark/:question_id', auth, async (req, res) => {
 
     } catch (err) {
         console.error(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(400).json({ msg: 'ID câu hỏi không hợp lệ.' });
-        }
         res.status(500).send('Lỗi Server');
     }
 });
@@ -55,31 +44,54 @@ router.put('/bookmark/:question_id', auth, async (req, res) => {
 // @desc    Lấy tất cả các câu hỏi đã được bookmark bởi người dùng hiện tại
 // @access  Private
 router.get('/bookmarks', auth, async (req, res) => {
-    const userId = req.user.id;
     try {
-        const user = await User.findById(userId); // Không populate trực tiếp vì phức tạp với sub-document
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ msg: 'Người dùng không tìm thấy' });
         }
         const bookmarkedQuestionIds = user.bookmarkedQuestions;
 
-        // MỚI: Tìm các Quiz chứa các câu hỏi đã bookmark và trích xuất câu hỏi
-        const bookmarkedQuestions = [];
-        const quizzesContainingBookmarks = await Quiz.find({ 'questions._id': { $in: bookmarkedQuestionIds } });
+        // ĐÃ SỬA: Dùng toán tử $or để tìm ID trong cả câu hỏi đơn và câu hỏi con
+        const quizzesContainingBookmarks = await Quiz.find({
+          $or: [
+            { 'questions._id': { $in: bookmarkedQuestionIds } },
+            { 'questions.childQuestions._id': { $in: bookmarkedQuestionIds } }
+          ]
+        });
 
+        const bookmarkedQuestionsDetails = [];
+        
+        // ĐÃ SỬA: Lặp qua và xử lý cả hai loại câu hỏi
         quizzesContainingBookmarks.forEach(quiz => {
-            quiz.questions.forEach(question => {
-                if (bookmarkedQuestionIds.includes(question._id.toString())) {
-                    bookmarkedQuestions.push({
-                        quizId: quiz._id,
-                        quizTitle: quiz.title,
-                        question: question // Toàn bộ thông tin câu hỏi
+            quiz.questions.forEach(item => {
+                if (item.type === 'single') {
+                    if (bookmarkedQuestionIds.some(bqId => bqId.equals(item._id))) {
+                        bookmarkedQuestionsDetails.push({
+                            quizId: quiz._id,
+                            quizTitle: quiz.title,
+                            question: item
+                        });
+                    }
+                } else if (item.type === 'group') {
+                    item.childQuestions.forEach(childQuestion => {
+                        if (bookmarkedQuestionIds.some(bqId => bqId.equals(childQuestion._id))) {
+                            // Khi trả về câu hỏi con, gắn thêm caseStem để có đầy đủ ngữ cảnh
+                            const questionWithStem = { 
+                                ...childQuestion.toObject(), 
+                                caseStem: item.caseStem 
+                            };
+                            bookmarkedQuestionsDetails.push({
+                                quizId: quiz._id,
+                                quizTitle: quiz.title,
+                                question: questionWithStem
+                            });
+                        }
                     });
                 }
             });
         });
 
-        res.json(bookmarkedQuestions);
+        res.json(bookmarkedQuestionsDetails);
 
     } catch (err) {
         console.error(err.message);
