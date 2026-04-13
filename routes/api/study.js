@@ -1,14 +1,13 @@
 // server/routes/api/study.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../../middleware/authMiddleware');
 const Quiz = require('../../models/Quiz');
 
 // @route   GET api/study/filters
 // @desc    Lấy tất cả các tag và độ khó duy nhất để làm bộ lọc
-// @access  Private
+// @access  Public (Đã bỏ auth)
 // GIỮ NGUYÊN: Route này đã được tối ưu bằng aggregation, hoạt động rất hiệu quả.
-router.get('/filters', auth, async (req, res) => {
+router.get('/filters', async (req, res) => {
   try {
     // Sử dụng aggregation để lấy tag từ cả câu hỏi đơn và câu hỏi con
     const tagsResult = await Quiz.aggregate([
@@ -43,9 +42,9 @@ router.get('/filters', auth, async (req, res) => {
 
 // @route   POST api/study/session
 // @desc    Tạo một buổi ôn tập (bộ đề ảo) dựa trên các bộ lọc
-// @access  Private
+// @access  Public (Đã bỏ auth)
 // ĐÃ SỬA: Thay thế hoàn toàn logic cũ bằng Aggregation Pipeline để tối ưu hiệu năng.
-router.post('/session', auth, async (req, res) => {
+router.post('/session', async (req, res) => {
   const { tags, difficulties, numberOfQuestions, tagFilterMode = 'any' } = req.body;
 
   try {

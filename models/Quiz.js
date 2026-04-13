@@ -65,7 +65,7 @@ const quizSchema = new mongoose.Schema({
   subject: { type: String, required: true, trim: true },
   topic: { type: String, trim: true },
   questions: [questionSchema], // Mảng này giờ sẽ chứa các câu hỏi "lai"
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Không bắt buộc nữa
   isSystemQuiz: { type: Boolean, default: false }
 }, {
   timestamps: true
