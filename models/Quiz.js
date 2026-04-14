@@ -7,9 +7,10 @@ const optionSchema = new mongoose.Schema({
   feedback: { type: String, trim: true }
 });
 
-// MỚI: Schema cho các câu hỏi con trong một nhóm
+// Schema cho các câu hỏi con trong một nhóm
 const childQuestionSchema = new mongoose.Schema({
   questionText: { type: String, required: true, trim: true },
+  imageUrl: { type: String, default: "" }, // MỚI THÊM: Chứa link ảnh cho câu hỏi con (nếu có)
   questionType: {
     type: String,
     enum: ['single-choice', 'multi-select', 'true-false'],
@@ -33,7 +34,7 @@ const childQuestionSchema = new mongoose.Schema({
   }
 });
 
-// ĐÃ SỬA: questionSchema giờ là một cấu trúc "lai"
+// questionSchema giờ là một cấu trúc "lai"
 const questionSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -50,6 +51,7 @@ const questionSchema = new mongoose.Schema({
   childQuestions: { type: [childQuestionSchema], required: function() { return this.type === 'group'; } },
   
   // Các trường chung cho cả hai loại
+  imageUrl: { type: String, default: "" }, // MỚI THÊM: Chứa link ảnh cho câu hỏi đơn HOẶC ảnh của Bệnh án (caseStem)
   generalExplanation: { type: String, trim: true },
   tags: { type: [String], default: [] },
   difficulty: {
@@ -64,8 +66,8 @@ const quizSchema = new mongoose.Schema({
   description: { type: String, trim: true },
   subject: { type: String, required: true, trim: true },
   topic: { type: String, trim: true },
-  questions: [questionSchema], // Mảng này giờ sẽ chứa các câu hỏi "lai"
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Không bắt buộc nữa
+  questions: [questionSchema], 
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   isSystemQuiz: { type: Boolean, default: false }
 }, {
   timestamps: true
