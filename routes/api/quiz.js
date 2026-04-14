@@ -109,24 +109,25 @@ router.get('/:id', async (req, res) => {
 // @desc    Cập nhật một bộ đề
 // @access  Public (Đã bỏ auth)
 router.put('/:id', async (req, res) => {
-    const quizId = req.params.id;
-    const { title, description, subject, topic, questions, isSystemQuiz } = req.body;
-
     try {
-        let quiz = await Quiz.findById(quizId);
-        if (!quiz) {
+        const quizId = req.params.id;
+        const updateData = req.body;
+
+        // Sử dụng findByIdAndUpdate với tham số { new: true } để ép database 
+        // ghi đè hoàn toàn dữ liệu mới (bao gồm cả các imageUrl mới)
+        const updatedQuiz = await Quiz.findByIdAndUpdate(
+            quizId,
+            { $set: updateData }, 
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedQuiz) {
             return res.status(404).json({ msg: 'Bộ đề không tìm thấy' });
         }
 
-        quiz.title = title || quiz.title;
-        quiz.description = description || quiz.description;
-        quiz.subject = subject || quiz.subject;
-        quiz.topic = topic || quiz.topic;
-        quiz.questions = questions || quiz.questions;
-        quiz.isSystemQuiz = isSystemQuiz !== undefined ? isSystemQuiz : quiz.isSystemQuiz; 
+        console.log("Đã cập nhật bộ đề thành công vào Database");
+        res.json(updatedQuiz);
 
-        await quiz.save();
-        res.json(quiz);
     } catch (err) {
         console.error(err.message);
         if (err.kind === 'ObjectId') {
