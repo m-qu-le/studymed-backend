@@ -212,7 +212,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     
     // req.file.path chính là cái URL (đường dẫn phim X-quang) mà Cloudinary trả về
     console.log("Đã upload ảnh thành công:", req.file.path);
-    res.json({ imageUrl: req.file.path });
+    res.json({ imageUrl: req.file.secure_url || req.file.path });
 
   } catch (err) {
     console.error('Lỗi khi upload ảnh:', err);
