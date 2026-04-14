@@ -107,17 +107,22 @@ router.get('/:id', async (req, res) => {
 
 // @route   PUT api/quizzes/:id
 // @desc    Cập nhật một bộ đề
-// @access  Public (Đã bỏ auth)
 router.put('/:id', async (req, res) => {
     try {
         const quizId = req.params.id;
-        const updateData = req.body;
+        
+        console.log("\n=== BACKEND TRẠM 1: NHẬN DỮ LIỆU TỪ FRONTEND ===");
+        console.log("- ID bộ đề:", quizId);
+        
+        // In thử câu hỏi đầu tiên ra xem Backend có nhận được cái chữ imageUrl không
+        if (req.body.questions && req.body.questions.length > 0) {
+            console.log("- Dữ liệu câu hỏi 0 nhận được:", JSON.stringify(req.body.questions[0], null, 2));
+        }
 
-        // Sử dụng findByIdAndUpdate với tham số { new: true } để ép database 
-        // ghi đè hoàn toàn dữ liệu mới (bao gồm cả các imageUrl mới)
+        // Thực hiện lưu vào Database
         const updatedQuiz = await Quiz.findByIdAndUpdate(
             quizId,
-            { $set: updateData }, 
+            { $set: req.body }, 
             { new: true, runValidators: true }
         );
 
@@ -125,18 +130,19 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ msg: 'Bộ đề không tìm thấy' });
         }
 
-        console.log("Đã cập nhật bộ đề thành công vào Database");
-        res.json(updatedQuiz);
+        console.log("\n=== BACKEND TRẠM 2: LƯU DATABASE THÀNH CÔNG ===");
+        // In lại câu hỏi đầu tiên SAU KHI lấy từ Database ra để đối chiếu
+        if (updatedQuiz.questions && updatedQuiz.questions.length > 0) {
+            console.log("- Dữ liệu câu hỏi 0 trong DB:", JSON.stringify(updatedQuiz.questions[0], null, 2));
+        }
 
+        res.json(updatedQuiz);
     } catch (err) {
-        console.error(err.message);
+        console.error("\n=== BACKEND GẶP LỖI ===", err.message);
         if (err.kind === 'ObjectId') {
             return res.status(400).json({ msg: 'ID bộ đề không hợp lệ' });
         }
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ msg: err.message });
-        }
-        res.status(500).send('Lỗi Server');
+        res.status(500).send('Lỗi Server khi cập nhật');
     }
 });
 
