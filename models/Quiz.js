@@ -10,7 +10,7 @@ const optionSchema = new mongoose.Schema({
 // Schema cho các câu hỏi con trong một nhóm
 const childQuestionSchema = new mongoose.Schema({
   questionText: { type: String, required: true, trim: true },
-  imageUrl: { type: String, default: "" }, // MỚI THÊM: Chứa link ảnh cho câu hỏi con (nếu có)
+  imageUrl: { type: String, default: "" }, // <--- MỚI THÊM: Chứa link ảnh cho câu hỏi con (nếu có)
   questionType: {
     type: String,
     enum: ['single-choice', 'multi-select', 'true-false'],
@@ -51,7 +51,7 @@ const questionSchema = new mongoose.Schema({
   childQuestions: { type: [childQuestionSchema], required: function() { return this.type === 'group'; } },
   
   // Các trường chung cho cả hai loại
-  imageUrl: { type: String, default: "" }, // MỚI THÊM: Chứa link ảnh cho câu hỏi đơn HOẶC ảnh của Bệnh án (caseStem)
+  imageUrl: { type: String, default: "" }, // <--- MỚI THÊM: Chứa link ảnh cho câu hỏi đơn HOẶC ảnh của Bệnh án (caseStem)
   generalExplanation: { type: String, trim: true },
   tags: { type: [String], default: [] },
   difficulty: {
