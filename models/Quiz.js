@@ -26,7 +26,7 @@ const childQuestionSchema = new mongoose.Schema({
     }
   },
   generalExplanation: { type: String, trim: true },
-  tags: { type: [String], default: [] },
+  // Đã phẫu thuật cắt bỏ "ruột thừa": tags
   difficulty: {
     type: String,
     enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'],
@@ -53,7 +53,10 @@ const questionSchema = new mongoose.Schema({
   // Các trường chung cho cả hai loại
   imageUrl: { type: String, default: "" }, // <--- MỚI THÊM: Chứa link ảnh cho câu hỏi đơn HOẶC ảnh của Bệnh án (caseStem)
   generalExplanation: { type: String, trim: true },
-  tags: { type: [String], default: [] },
+  
+  // "Kháng nguyên bề mặt" - Giữ nguyên tuyệt đối để phục vụ hệ tuần hoàn lọc dữ liệu
+  tags: { type: [String], default: [] }, 
+  
   difficulty: {
     type: String,
     enum: ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'],
