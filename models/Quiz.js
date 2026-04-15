@@ -42,6 +42,13 @@ const questionSchema = new mongoose.Schema({
     enum: ['single', 'group']
   },
   
+  // ---> BỔ SUNG TRƯỜNG NÀY ĐỂ DATABASE CHỊU LƯU LOẠI CÂU HỎI ĐƠN <---
+  questionType: {
+    type: String,
+    enum: ['single-choice', 'multi-select', 'true-false'],
+    default: 'single-choice'
+  },
+  
   // Các trường cho type: 'single'
   questionText: { type: String, required: function() { return this.type === 'single'; } },
   options: { type: [optionSchema], required: function() { return this.type === 'single'; } },
